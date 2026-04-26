@@ -171,7 +171,7 @@ async function enviarFormulario() {
 
     // Usamos un formulario oculto para evitar problemas de CORS con Apps Script
     const form = document.createElement("form");
-    form.method = "POST";
+    form.method = "GET";
     form.action = SCRIPT_URL;
     form.target = "hidden_iframe";
 

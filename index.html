@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro de Equipos — Terpel</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div class="header">
+    <div class="header-logo">TPL</div>
+    <div>
+      <h1>Registro de Equipos</h1>
+      <p>Terpel — Control Técnico</p>
+    </div>
+    <div class="fecha-badge" id="fechaBadge">—</div>
+  </div>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">Datos generales</div>
+      <div class="grid2">
+        <div>
+          <label for="tecnico">Nombre del técnico</label>
+          <input type="text" id="tecnico" placeholder="Ej: Juan Pérez" required/>
+        </div>
+        <div>
+          <label for="estacion">Estación</label>
+          <input type="text" id="estacion" placeholder="Ej: Estación Norte" required/>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <label for="ticket">Ticket</label>
+        <input type="text" id="ticket" placeholder="Ej: TKT-20240001" required/>
+      </div>
+      <div style="margin-top:16px;">
+        <label for="cantidadEquipos">Cantidad de equipos</label>
+        <div class="counter-wrap">
+          <input type="number" id="cantidadEquipos" min="1" max="30" value="1"/>
+          <span class="counter-note">Máx. 30 equipos por registro</span>
+        </div>
+      </div>
+    </div>
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div id="equipos-container"></div>
+    <div class="card" style="margin-top:8px;">
+      <button class="btn-submit" id="btnEnviar" onclick="enviarFormulario()">
+        <span>📤</span> Enviar registro
+      </button>
+      <p class="submit-note">Las fotos se subirán automáticamente a Google Drive</p>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>

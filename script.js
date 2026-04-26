@@ -1,4 +1,4 @@
-const SCRIPT_URL = "https://script.google.com/a/macros/atiovar.com/s/AKfycby3O8T88fs20HIlzwXd0b6TY992Mt3C2JQJXbMc20kCSx53TC9NM0Np85vIbdtaAdVpmg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby3O8T88fs20HIlzwXd0b6TY992Mt3C2JQJXbMc20kCSx53TC9NM0Np85vIbdtaAdVpmg/exec";
 let fechaActual = "";
 
 function initFecha() {
@@ -128,7 +128,7 @@ async function enviarFormulario() {
 
   const btn = document.getElementById("btnEnviar");
   btn.disabled = true;
-  btn.innerHTML = "<span>⏳</span> Procesando fotos...";
+  btn.innerHTML = "<span>⏳</span> Procesando...";
   setProgreso(5);
 
   try {
@@ -166,32 +166,18 @@ async function enviarFormulario() {
       setProgreso(5 + Math.round((i / cantidad) * 50));
     }
 
-    btn.innerHTML = "<span>📡</span> Enviando a Google Sheets...";
+    btn.innerHTML = "<span>📡</span> Enviando...";
     setProgreso(60);
 
-    // Usamos un formulario oculto para evitar problemas de CORS con Apps Script
-    const form = document.createElement("form");
-    form.method = "GET";
-    form.action = SCRIPT_URL;
-    form.target = "hidden_iframe";
+    // Enviar sin fotos primero para probar la conexión
+    const payload = encodeURIComponent(JSON.stringify({
+      fecha: fechaActual, tecnico, estacion, ticket, equipos
+    }));
 
-    const input = document.createElement("input");
-    input.type  = "hidden";
-    input.name  = "payload";
-    input.value = JSON.stringify({ fecha: fechaActual, tecnico, estacion, ticket, equipos });
-    form.appendChild(input);
-
-    const iframe = document.createElement("iframe");
-    iframe.name  = "hidden_iframe";
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
-    document.body.appendChild(form);
-    form.submit();
-
-    setTimeout(() => {
-      document.body.removeChild(form);
-      document.body.removeChild(iframe);
-    }, 5000);
+    const response = await fetch(`${SCRIPT_URL}?payload=${payload}`, {
+      method: "GET",
+      mode: "no-cors"
+    });
 
     setProgreso(100);
     mostrarToast("✅ Registro enviado con éxito", "success");

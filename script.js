@@ -115,6 +115,39 @@ function setProgreso(pct) {
   fill.style.width = pct + "%";
 }
 
+// Envía datos por GET en chunks si es necesario
+async function enviarGET(payload) {
+  const encoded = encodeURIComponent(JSON.stringify(payload));
+  const url = `${SCRIPT_URL}?payload=${encoded}`;
+  await fetch(url, { method: "GET", mode: "no-cors" });
+}
+
+// Redimensiona imagen antes de convertir a base64
+function redimensionarImagen(file, maxWidth = 800) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width  = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width  = maxWidth;
+        }
+        canvas.width  = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        const base64 = canvas.toDataURL("image/jpeg", 0.6).split(",")[1];
+        resolve({ base64, tipo: "image/jpeg" });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 async function enviarFormulario() {
   const tecnico  = document.getElementById("tecnico").value.trim();
   const estacion = document.getElementById("estacion").value.trim();
@@ -128,7 +161,7 @@ async function enviarFormulario() {
 
   const btn = document.getElementById("btnEnviar");
   btn.disabled = true;
-  btn.innerHTML = "<span>⏳</span> Procesando...";
+  btn.innerHTML = "<span>⏳</span> Procesando fotos...";
   setProgreso(5);
 
   try {
@@ -153,31 +186,59 @@ async function enviarFormulario() {
       let fotoSerialBase64 = "", fotoSerialTipo = "";
       let fotoPlacaBase64  = "", fotoPlacaTipo  = "";
 
+      // Redimensionar fotos para reducir tamaño
       if (!sinSerial && inputSerial?.files[0]) {
-        fotoSerialBase64 = await fileToBase64(inputSerial.files[0]);
-        fotoSerialTipo   = inputSerial.files[0].type;
+        const r = await redimensionarImagen(inputSerial.files[0]);
+        fotoSerialBase64 = r.base64;
+        fotoSerialTipo   = r.tipo;
       }
       if (inputPlaca?.files[0]) {
-        fotoPlacaBase64 = await fileToBase64(inputPlaca.files[0]);
-        fotoPlacaTipo   = inputPlaca.files[0].type;
+        const r = await redimensionarImagen(inputPlaca.files[0]);
+        fotoPlacaBase64 = r.base64;
+        fotoPlacaTipo   = r.tipo;
       }
 
       equipos.push({ sinSerial, serial, placa, fotoSerialBase64, fotoSerialTipo, fotoPlacaBase64, fotoPlacaTipo });
-      setProgreso(5 + Math.round((i / cantidad) * 50));
+      setProgreso(5 + Math.round((i / cantidad) * 40));
     }
 
-    btn.innerHTML = "<span>📡</span> Enviando...";
-    setProgreso(60);
+    btn.innerHTML = "<span>📡</span> Enviando datos...";
+    setProgreso(50);
 
-    // Enviar sin fotos primero para probar la conexión
-    const payload = encodeURIComponent(JSON.stringify({
-      fecha: fechaActual, tecnico, estacion, ticket, equipos
-    }));
+    // Paso 1: enviar datos sin fotos
+    const datosTexto = {
+      fecha: fechaActual, tecnico, estacion, ticket,
+      equipos: equipos.map(eq => ({
+        sinSerial: eq.sinSerial,
+        serial:    eq.serial,
+        placa:     eq.placa,
+        fotoSerialBase64: "",
+        fotoSerialTipo:   "",
+        fotoPlacaBase64:  "",
+        fotoPlacaTipo:    ""
+      }))
+    };
+    await enviarGET(datosTexto);
+    setProgreso(70);
 
-    const response = await fetch(`${SCRIPT_URL}?payload=${payload}`, {
-      method: "GET",
-      mode: "no-cors"
-    });
+    // Paso 2: enviar fotos por equipo una a una
+    btn.innerHTML = "<span>📸</span> Subiendo fotos...";
+    for (let i = 0; i < equipos.length; i++) {
+      const eq = equipos[i];
+      if (eq.fotoSerialBase64 || eq.fotoPlacaBase64) {
+        await enviarGET({
+          accion: "fotos",
+          ticket,
+          equipoIndex: i + 1,
+          sinSerial:        eq.sinSerial,
+          fotoSerialBase64: eq.fotoSerialBase64,
+          fotoSerialTipo:   eq.fotoSerialTipo,
+          fotoPlacaBase64:  eq.fotoPlacaBase64,
+          fotoPlacaTipo:    eq.fotoPlacaTipo
+        });
+      }
+      setProgreso(70 + Math.round(((i + 1) / equipos.length) * 25));
+    }
 
     setProgreso(100);
     mostrarToast("✅ Registro enviado con éxito", "success");

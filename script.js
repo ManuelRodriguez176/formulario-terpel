@@ -92,15 +92,6 @@ function previsualizarFoto(input, previewId, nameId) {
   reader.readAsDataURL(file);
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 function mostrarToast(msg, tipo = "") {
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -115,11 +106,14 @@ function setProgreso(pct) {
   fill.style.width = pct + "%";
 }
 
-// Envía datos por GET en chunks si es necesario
-async function enviarGET(payload) {
-  const encoded = encodeURIComponent(JSON.stringify(payload));
-  const url = `${SCRIPT_URL}?payload=${encoded}`;
-  await fetch(url, { method: "GET", mode: "no-cors" });
+// ✅ CORREGIDO: Envía por POST con body JSON (soporta fotos grandes)
+async function enviarPOST(payload) {
+  await fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload)
+  });
 }
 
 // Redimensiona imagen antes de convertir a base64
@@ -186,7 +180,6 @@ async function enviarFormulario() {
       let fotoSerialBase64 = "", fotoSerialTipo = "";
       let fotoPlacaBase64  = "", fotoPlacaTipo  = "";
 
-      // Redimensionar fotos para reducir tamaño
       if (!sinSerial && inputSerial?.files[0]) {
         const r = await redimensionarImagen(inputSerial.files[0]);
         fotoSerialBase64 = r.base64;
@@ -199,46 +192,30 @@ async function enviarFormulario() {
       }
 
       equipos.push({ sinSerial, serial, placa, fotoSerialBase64, fotoSerialTipo, fotoPlacaBase64, fotoPlacaTipo });
-      setProgreso(5 + Math.round((i / cantidad) * 40));
+      setProgreso(5 + Math.round((i / cantidad) * 50));
     }
 
+    // ✅ CORREGIDO: Un solo envío POST con todos los datos y fotos juntos
     btn.innerHTML = "<span>📡</span> Enviando datos...";
-    setProgreso(50);
+    setProgreso(60);
 
-    // Paso 1: enviar datos sin fotos
-    const datosTexto = {
-      fecha: fechaActual, tecnico, estacion, ticket,
+    const payload = {
+      fecha: fechaActual,
+      tecnico,
+      estacion,
+      ticket,
       equipos: equipos.map(eq => ({
-        sinSerial: eq.sinSerial,
-        serial:    eq.serial,
-        placa:     eq.placa,
-        fotoSerialBase64: "",
-        fotoSerialTipo:   "",
-        fotoPlacaBase64:  "",
-        fotoPlacaTipo:    ""
+        sinSerial:        eq.sinSerial,
+        serial:           eq.serial,
+        placa:            eq.placa,
+        fotoSerialBase64: eq.fotoSerialBase64,
+        fotoSerialTipo:   eq.fotoSerialTipo,
+        fotoPlacaBase64:  eq.fotoPlacaBase64,
+        fotoPlacaTipo:    eq.fotoPlacaTipo
       }))
     };
-    await enviarGET(datosTexto);
-    setProgreso(70);
 
-    // Paso 2: enviar fotos por equipo una a una
-    btn.innerHTML = "<span>📸</span> Subiendo fotos...";
-    for (let i = 0; i < equipos.length; i++) {
-      const eq = equipos[i];
-      if (eq.fotoSerialBase64 || eq.fotoPlacaBase64) {
-        await enviarGET({
-          accion: "fotos",
-          ticket,
-          equipoIndex: i + 1,
-          sinSerial:        eq.sinSerial,
-          fotoSerialBase64: eq.fotoSerialBase64,
-          fotoSerialTipo:   eq.fotoSerialTipo,
-          fotoPlacaBase64:  eq.fotoPlacaBase64,
-          fotoPlacaTipo:    eq.fotoPlacaTipo
-        });
-      }
-      setProgreso(70 + Math.round(((i + 1) / equipos.length) * 25));
-    }
+    await enviarPOST(payload);
 
     setProgreso(100);
     mostrarToast("✅ Registro enviado con éxito", "success");

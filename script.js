@@ -169,12 +169,29 @@ async function enviarFormulario() {
     btn.innerHTML = "<span>📡</span> Enviando a Google Sheets...";
     setProgreso(60);
 
-    await fetch(SCRIPT_URL, {
-      method:  "POST",
-      mode:    "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ fecha: fechaActual, tecnico, estacion, ticket, equipos })
-    });
+    // Usamos un formulario oculto para evitar problemas de CORS con Apps Script
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = SCRIPT_URL;
+    form.target = "hidden_iframe";
+
+    const input = document.createElement("input");
+    input.type  = "hidden";
+    input.name  = "payload";
+    input.value = JSON.stringify({ fecha: fechaActual, tecnico, estacion, ticket, equipos });
+    form.appendChild(input);
+
+    const iframe = document.createElement("iframe");
+    iframe.name  = "hidden_iframe";
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(() => {
+      document.body.removeChild(form);
+      document.body.removeChild(iframe);
+    }, 5000);
 
     setProgreso(100);
     mostrarToast("✅ Registro enviado con éxito", "success");

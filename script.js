@@ -1,4 +1,4 @@
-const SCRIPT_URL = "TU_URL_DEL_APPS_SCRIPT_AQUI";
+const SCRIPT_URL = "https://script.google.com/a/macros/atiovar.com/s/AKfycby3O8T88fs20HIlzwXd0b6TY992Mt3C2JQJXbMc20kCSx53TC9NM0Np85vIbdtaAdVpmg/exec";
 let fechaActual = "";
 
 function initFecha() {

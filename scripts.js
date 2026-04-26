@@ -8,7 +8,7 @@ let fechaActual = "";
 function initFecha() {
   const ahora = new Date();
   fechaActual = ahora.toLocaleString("es-PA", {
-    day: "2-digit", month: "2-digit", year: "numeric",
+    day: "2-digit", month: "2-digit", year: "numeric" ,
     hour: "2-digit", minute: "2-digit"
   });
   document.getElementById("fechaBadge").textContent = fechaActual;

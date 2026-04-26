@@ -22,17 +22,17 @@ function htmlEquipo(n) {
         <label>Serial del equipo</label>
         <input type="text" id="serial-${n}" placeholder="Ej: SN-1234567"/>
       </div>
-      <label class="checkbox-wrap" onclick="toggleSerial(${n})">
-        <input type="checkbox" id="sinSerial-${n}"/>
-        <span>⚠️ Este equipo no tiene serial</span>
+      <hr class="sep"/>
+      <div id="placaSection-${n}">
+        <label>Placa Terpel</label>
+        <input type="text" id="placa-${n}" placeholder="Ej: TPL-00123"/>
+      </div>
+      <label class="checkbox-wrap" onclick="togglePlaca(${n})">
+        <input type="checkbox" id="sinPlaca-${n}"/>
+        <span>⚠️ Este equipo no tiene placa</span>
       </label>
       <hr class="sep"/>
-      <div>
-        <label>Placa Terpel</label>
-        <input type="text" id="placa-${n}" placeholder="Ej: TPL-00123" required/>
-      </div>
-      <hr class="sep"/>
-      <div class="foto-wrap" id="fotoSerialWrap-${n}">
+      <div class="foto-wrap">
         <span class="foto-label-text">📷 Foto del serial</span>
         <div class="foto-drop">
           <input type="file" accept="image/*" capture="environment"
@@ -43,7 +43,7 @@ function htmlEquipo(n) {
         <img class="foto-preview" id="prevSerial-${n}" alt="Preview serial"/>
         <span class="foto-name" id="nameSerial-${n}"></span>
       </div>
-      <div class="foto-wrap">
+      <div class="foto-wrap" id="fotoPlacaWrap-${n}">
         <span class="foto-label-text">📷 Foto de la placa Terpel</span>
         <div class="foto-drop">
           <input type="file" accept="image/*" capture="environment"
@@ -66,14 +66,29 @@ function generarEquipos(cantidad) {
   }
 }
 
-function toggleSerial(n) {
-  const sinSerial = document.getElementById(`sinSerial-${n}`).checked;
-  const section   = document.getElementById(`serialSection-${n}`);
-  const fotoWrap  = document.getElementById(`fotoSerialWrap-${n}`);
-  section.classList.toggle("disabled", sinSerial);
+function togglePlaca(n) {
+  const sinPlaca   = document.getElementById(`sinPlaca-${n}`).checked;
+  const inputPlaca = document.getElementById(`placa-${n}`);
+  const fotoWrap   = document.getElementById(`fotoPlacaWrap-${n}`);
+
+  // Deshabilita el campo de texto de la placa
+  inputPlaca.disabled    = sinPlaca;
+  inputPlaca.placeholder = sinPlaca ? "Sin placa" : "Ej: TPL-00123";
+  if (sinPlaca) inputPlaca.value = "";
+
+  // Deshabilita y limpia la sección de foto de placa
   if (fotoWrap) {
-    fotoWrap.style.opacity       = sinSerial ? "0.4" : "1";
-    fotoWrap.style.pointerEvents = sinSerial ? "none" : "auto";
+    fotoWrap.style.opacity       = sinPlaca ? "0.4" : "1";
+    fotoWrap.style.pointerEvents = sinPlaca ? "none" : "auto";
+
+    if (sinPlaca) {
+      const fileInput = fotoWrap.querySelector("input[type=file]");
+      const preview   = document.getElementById(`prevPlaca-${n}`);
+      const name      = document.getElementById(`namePlaca-${n}`);
+      if (fileInput) fileInput.value = "";
+      if (preview)   { preview.src = ""; preview.classList.remove("visible"); }
+      if (name)      { name.textContent = ""; name.classList.remove("visible"); }
+    }
   }
 }
 
@@ -106,7 +121,6 @@ function setProgreso(pct) {
   fill.style.width = pct + "%";
 }
 
-// ✅ CORREGIDO: Envía por POST con body JSON (soporta fotos grandes)
 async function enviarPOST(payload) {
   await fetch(SCRIPT_URL, {
     method: "POST",
@@ -116,7 +130,6 @@ async function enviarPOST(payload) {
   });
 }
 
-// Redimensiona imagen antes de convertir a base64
 function redimensionarImagen(file, maxWidth = 800) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -161,11 +174,12 @@ async function enviarFormulario() {
   try {
     const equipos = [];
     for (let i = 1; i <= cantidad; i++) {
-      const sinSerial = document.getElementById(`sinSerial-${i}`).checked;
-      const serial    = sinSerial ? "" : document.getElementById(`serial-${i}`).value.trim();
-      const placa     = document.getElementById(`placa-${i}`).value.trim();
+      const sinPlaca = document.getElementById(`sinPlaca-${i}`).checked;
+      const serial   = document.getElementById(`serial-${i}`).value.trim();
+      const placa    = sinPlaca ? "SIN PLACA" : document.getElementById(`placa-${i}`).value.trim();
 
-      if (!placa) {
+      // Validar: si no marcó "sin placa", la placa es obligatoria
+      if (!sinPlaca && !placa) {
         mostrarToast(`⚠️ Equipo ${i}: falta la placa Terpel`, "error");
         btn.disabled = false;
         btn.innerHTML = "<span>📤</span> Enviar registro";
@@ -180,22 +194,23 @@ async function enviarFormulario() {
       let fotoSerialBase64 = "", fotoSerialTipo = "";
       let fotoPlacaBase64  = "", fotoPlacaTipo  = "";
 
-      if (!sinSerial && inputSerial?.files[0]) {
+      if (inputSerial?.files[0]) {
         const r = await redimensionarImagen(inputSerial.files[0]);
         fotoSerialBase64 = r.base64;
         fotoSerialTipo   = r.tipo;
       }
-      if (inputPlaca?.files[0]) {
+
+      // Solo procesar foto de placa si NO marcó "sin placa"
+      if (!sinPlaca && inputPlaca?.files[0]) {
         const r = await redimensionarImagen(inputPlaca.files[0]);
         fotoPlacaBase64 = r.base64;
         fotoPlacaTipo   = r.tipo;
       }
 
-      equipos.push({ sinSerial, serial, placa, fotoSerialBase64, fotoSerialTipo, fotoPlacaBase64, fotoPlacaTipo });
+      equipos.push({ sinPlaca, serial, placa, fotoSerialBase64, fotoSerialTipo, fotoPlacaBase64, fotoPlacaTipo });
       setProgreso(5 + Math.round((i / cantidad) * 50));
     }
 
-    // ✅ CORREGIDO: Un solo envío POST con todos los datos y fotos juntos
     btn.innerHTML = "<span>📡</span> Enviando datos...";
     setProgreso(60);
 
@@ -205,13 +220,13 @@ async function enviarFormulario() {
       estacion,
       ticket,
       equipos: equipos.map(eq => ({
-        sinSerial:        eq.sinSerial,
+        sinPlaca:         eq.sinPlaca,
         serial:           eq.serial,
         placa:            eq.placa,
         fotoSerialBase64: eq.fotoSerialBase64,
         fotoSerialTipo:   eq.fotoSerialTipo,
-        fotoPlacaBase64:  eq.fotoPlacaBase64,
-        fotoPlacaTipo:    eq.fotoPlacaTipo
+        fotoPlacaBase64:  eq.sinPlaca ? "" : eq.fotoPlacaBase64,
+        fotoPlacaTipo:    eq.sinPlaca ? "" : eq.fotoPlacaTipo
       }))
     };
 

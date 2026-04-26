@@ -1,0 +1,420 @@
+/* ─── RESET & VARIABLES ─────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --verde:       #00703C;
+  --verde-dark:  #005a2f;
+  --verde-light: #e6f4ed;
+  --rojo:        #D62828;
+  --gris:        #f5f5f0;
+  --borde:       #d0d0c8;
+  --texto:       #1a1a18;
+  --muted:       #6b6b65;
+  --blanco:      #ffffff;
+  --radius:      6px;
+  --sombra:      0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ─── BASE ───────────────────────────────────────────────── */
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--gris);
+  color: var(--texto);
+  min-height: 100vh;
+  padding: 0 0 60px;
+}
+
+/* ─── HEADER ─────────────────────────────────────────────── */
+.header {
+  background: var(--verde);
+  color: #fff;
+  padding: 20px 24px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,112,60,0.3);
+}
+
+.header-logo {
+  width: 42px;
+  height: 42px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--verde);
+  letter-spacing: -0.5px;
+}
+
+.header h1 {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.header p {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.fecha-badge {
+  margin-left: auto;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+}
+
+/* ─── LAYOUT ─────────────────────────────────────────────── */
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 0;
+}
+
+/* ─── CARD ───────────────────────────────────────────────── */
+.card {
+  background: var(--blanco);
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--sombra);
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--verde);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title::before {
+  content: '';
+  display: block;
+  width: 3px;
+  height: 16px;
+  background: var(--verde);
+  border-radius: 2px;
+}
+
+/* ─── GRID ───────────────────────────────────────────────── */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 500px) {
+  .grid2 { grid-template-columns: 1fr; }
+}
+
+/* ─── FORM FIELDS ────────────────────────────────────────── */
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+input[type=text],
+input[type=number],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radius);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 15px;
+  color: var(--texto);
+  background: var(--blanco);
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--verde);
+  box-shadow: 0 0 0 3px rgba(0,112,60,0.1);
+}
+
+input.error {
+  border-color: var(--rojo);
+}
+
+/* ─── CONTADOR ───────────────────────────────────────────── */
+.counter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.counter-wrap input[type=number] {
+  width: 80px;
+  text-align: center;
+}
+
+.counter-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ─── EQUIPO CARD ────────────────────────────────────────── */
+#equipos-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.equipo-card {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--sombra);
+  animation: slideIn 0.25s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.equipo-header {
+  background: var(--verde);
+  color: #fff;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.equipo-num {
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.equipo-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── CHECKBOX SIN SERIAL ────────────────────────────────── */
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fff8e6;
+  border: 1px solid #f0d080;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.checkbox-wrap input[type=checkbox] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--verde);
+  cursor: pointer;
+}
+
+.checkbox-wrap span {
+  font-size: 13px;
+  font-weight: 500;
+  color: #7a5c00;
+  user-select: none;
+}
+
+/* ─── SERIAL SECTION ─────────────────────────────────────── */
+.serial-section {
+  transition: opacity 0.2s;
+}
+
+.serial-section.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ─── FOTO UPLOAD ────────────────────────────────────────── */
+.foto-wrap {
+  position: relative;
+}
+
+.foto-label-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.foto-drop {
+  border: 1.5px dashed var(--borde);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.foto-drop:hover {
+  border-color: var(--verde);
+  background: var(--verde-light);
+}
+
+.foto-drop input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.foto-icon { font-size: 22px; }
+
+.foto-text {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.foto-preview {
+  margin-top: 8px;
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--borde);
+  display: none;
+}
+
+.foto-preview.visible { display: block; }
+
+.foto-name {
+  font-size: 11px;
+  color: var(--verde);
+  font-family: 'IBM Plex Mono', monospace;
+  margin-top: 4px;
+  display: none;
+}
+
+.foto-name.visible { display: block; }
+
+/* ─── BOTÓN SUBMIT ───────────────────────────────────────── */
+.btn-submit {
+  width: 100%;
+  padding: 16px;
+  background: var(--verde);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-submit:hover  { background: var(--verde-dark); }
+.btn-submit:active { transform: scale(0.99); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.submit-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+
+/* ─── TOAST ──────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #1a1a18;
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 999;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast.show    { transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--verde); }
+.toast.error   { background: var(--rojo); }
+
+/* ─── PROGRESS BAR ───────────────────────────────────────── */
+.progress-bar {
+  height: 4px;
+  background: var(--verde-light);
+  border-radius: 2px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  display: none;
+}
+
+.progress-bar.visible { display: block; }
+
+.progress-fill {
+  height: 100%;
+  background: var(--verde);
+  border-radius: 2px;
+  transition: width 0.3s;
+  width: 0%;
+}
+
+/* ─── SEPARADOR ──────────────────────────────────────────── */
+hr.sep {
+  border: none;
+  border-top: 1px solid var(--borde);
+  margin: 8px 0 16px;
+}

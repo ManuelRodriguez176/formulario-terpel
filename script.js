@@ -1,6 +1,8 @@
+// ── CONFIG ───────────────────────────────────────────────
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby3O8T88fs20HIlzwXd0b6TY992Mt3C2JQJXbMc20kCSx53TC9NM0Np85vIbdtaAdVpmg/exec";
 let fechaActual = "";
 
+// ── FECHA ────────────────────────────────────────────────
 function initFecha() {
   const ahora = new Date();
   fechaActual = ahora.toLocaleString("es-PA", {
@@ -10,6 +12,7 @@ function initFecha() {
   document.getElementById("fechaBadge").textContent = fechaActual;
 }
 
+// ── HTML DE CADA EQUIPO ──────────────────────────────────
 function htmlEquipo(n) {
   return `
   <div class="equipo-card" id="equipo-${n}">
@@ -18,20 +21,49 @@ function htmlEquipo(n) {
       Equipo ${n}
     </div>
     <div class="equipo-body">
-      <div class="serial-section" id="serialSection-${n}">
+
+      <!-- SERIAL -->
+      <div>
         <label>Serial del equipo</label>
-        <input type="text" id="serial-${n}" placeholder="Ej: SN-1234567"/>
+        <div class="scan-row">
+          <div>
+            <input type="text" id="serial-${n}" placeholder="Ej: SN-1234567"/>
+          </div>
+          <button class="btn-scan" id="btnScanSerial-${n}" title="Escanear serial con cámara (OCR)" type="button">
+            🔍
+            <input type="file" accept="image/*" capture="environment"
+                   onchange="escanearOCR(this, 'serial-${n}', 'ocrStatusSerial-${n}', ${n}, 'serial')"/>
+          </button>
+        </div>
+        <div class="ocr-status" id="ocrStatusSerial-${n}"></div>
       </div>
+
       <hr class="sep"/>
+
+      <!-- PLACA -->
       <div id="placaSection-${n}">
         <label>Placa Terpel</label>
-        <input type="text" id="placa-${n}" placeholder="Ej: TPL-00123"/>
+        <div class="scan-row">
+          <div>
+            <input type="text" id="placa-${n}" placeholder="Ej: TPL-00123"/>
+          </div>
+          <button class="btn-scan" id="btnScanPlaca-${n}" title="Escanear placa con cámara (OCR)" type="button">
+            🔍
+            <input type="file" accept="image/*" capture="environment"
+                   onchange="escanearOCR(this, 'placa-${n}', 'ocrStatusPlaca-${n}', ${n}, 'placa')"/>
+          </button>
+        </div>
+        <div class="ocr-status" id="ocrStatusPlaca-${n}"></div>
       </div>
+
       <label class="checkbox-wrap" onclick="togglePlaca(${n})">
         <input type="checkbox" id="sinPlaca-${n}"/>
         <span>⚠️ Este equipo no tiene placa</span>
       </label>
+
       <hr class="sep"/>
+
+      <!-- FOTO SERIAL -->
       <div class="foto-wrap">
         <span class="foto-label-text">📷 Foto del serial</span>
         <div class="foto-drop">
@@ -43,6 +75,8 @@ function htmlEquipo(n) {
         <img class="foto-preview" id="prevSerial-${n}" alt="Preview serial"/>
         <span class="foto-name" id="nameSerial-${n}"></span>
       </div>
+
+      <!-- FOTO PLACA -->
       <div class="foto-wrap" id="fotoPlacaWrap-${n}">
         <span class="foto-label-text">📷 Foto de la placa Terpel</span>
         <div class="foto-drop">
@@ -54,6 +88,7 @@ function htmlEquipo(n) {
         <img class="foto-preview" id="prevPlaca-${n}" alt="Preview placa"/>
         <span class="foto-name" id="namePlaca-${n}"></span>
       </div>
+
     </div>
   </div>`;
 }
@@ -66,21 +101,82 @@ function generarEquipos(cantidad) {
   }
 }
 
+// ── OCR CON TESSERACT ────────────────────────────────────
+async function escanearOCR(input, campoId, statusId, n, tipo) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById(statusId);
+  const btnId    = tipo === "serial" ? `btnScanSerial-${n}` : `btnScanPlaca-${n}`;
+  const btnEl    = document.getElementById(btnId);
+
+  statusEl.textContent = "⏳ Analizando imagen...";
+  statusEl.classList.add("visible");
+  btnEl.classList.add("scanning");
+
+  try {
+    const { data: { text } } = await Tesseract.recognize(file, "eng", {
+      logger: m => {
+        if (m.status === "recognizing text") {
+          statusEl.textContent = `⏳ Procesando... ${Math.round(m.progress * 100)}%`;
+        }
+      }
+    });
+
+    let resultado = text.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+
+    if (tipo === "placa") {
+      const match = resultado.match(/[T7][P][L\-]\s*[\-]?\s*\d{3,6}/i);
+      if (match) resultado = match[0].replace(/\s/g, "").toUpperCase();
+    }
+
+    if (tipo === "serial") {
+      const match = resultado.match(/[A-Z0-9]{4,}[\-]?[A-Z0-9]*/i);
+      if (match) resultado = match[0].toUpperCase();
+    }
+
+    if (resultado && resultado.length > 1) {
+      document.getElementById(campoId).value = resultado;
+      statusEl.textContent = `✅ Detectado: ${resultado}`;
+      statusEl.style.color = "var(--verde)";
+    } else {
+      statusEl.textContent = "⚠️ No se pudo detectar texto. Ingresa manualmente.";
+      statusEl.style.color = "var(--amarillo)";
+    }
+
+  } catch (err) {
+    statusEl.textContent = "❌ Error al procesar imagen.";
+    statusEl.style.color = "#ff6b6b";
+    console.error(err);
+  } finally {
+    btnEl.classList.remove("scanning");
+    input.value = "";
+    setTimeout(() => {
+      statusEl.style.color = "";
+      statusEl.classList.remove("visible");
+    }, 6000);
+  }
+}
+
+// ── TOGGLE PLACA ─────────────────────────────────────────
 function togglePlaca(n) {
   const sinPlaca   = document.getElementById(`sinPlaca-${n}`).checked;
   const inputPlaca = document.getElementById(`placa-${n}`);
   const fotoWrap   = document.getElementById(`fotoPlacaWrap-${n}`);
+  const btnScan    = document.getElementById(`btnScanPlaca-${n}`);
 
-  // Deshabilita el campo de texto de la placa
-  inputPlaca.disabled    = sinPlaca;
-  inputPlaca.placeholder = sinPlaca ? "Sin placa" : "Ej: TPL-00123";
+  inputPlaca.disabled     = sinPlaca;
+  inputPlaca.placeholder  = sinPlaca ? "Sin placa" : "Ej: TPL-00123";
   if (sinPlaca) inputPlaca.value = "";
 
-  // Deshabilita y limpia la sección de foto de placa
+  if (btnScan) {
+    btnScan.style.opacity       = sinPlaca ? "0.3" : "1";
+    btnScan.style.pointerEvents = sinPlaca ? "none" : "auto";
+  }
+
   if (fotoWrap) {
     fotoWrap.style.opacity       = sinPlaca ? "0.4" : "1";
     fotoWrap.style.pointerEvents = sinPlaca ? "none" : "auto";
-
     if (sinPlaca) {
       const fileInput = fotoWrap.querySelector("input[type=file]");
       const preview   = document.getElementById(`prevPlaca-${n}`);
@@ -92,6 +188,7 @@ function togglePlaca(n) {
   }
 }
 
+// ── PREVIEW FOTO ─────────────────────────────────────────
 function previsualizarFoto(input, previewId, nameId) {
   const file = input.files[0];
   if (!file) return;
@@ -107,6 +204,7 @@ function previsualizarFoto(input, previewId, nameId) {
   reader.readAsDataURL(file);
 }
 
+// ── TOAST ────────────────────────────────────────────────
 function mostrarToast(msg, tipo = "") {
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -114,6 +212,7 @@ function mostrarToast(msg, tipo = "") {
   setTimeout(() => t.classList.remove("show"), 4000);
 }
 
+// ── PROGRESO ─────────────────────────────────────────────
 function setProgreso(pct) {
   const bar  = document.getElementById("progressBar");
   const fill = document.getElementById("progressFill");
@@ -121,15 +220,7 @@ function setProgreso(pct) {
   fill.style.width = pct + "%";
 }
 
-async function enviarPOST(payload) {
-  await fetch(SCRIPT_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify(payload)
-  });
-}
-
+// ── REDIMENSIONAR IMAGEN ─────────────────────────────────
 function redimensionarImagen(file, maxWidth = 800) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -155,6 +246,17 @@ function redimensionarImagen(file, maxWidth = 800) {
   });
 }
 
+// ── ENVIAR POST ──────────────────────────────────────────
+async function enviarPOST(payload) {
+  await fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload)
+  });
+}
+
+// ── ENVIAR FORMULARIO (un POST por equipo) ───────────────
 async function enviarFormulario() {
   const tecnico  = document.getElementById("tecnico").value.trim();
   const estacion = document.getElementById("estacion").value.trim();
@@ -166,28 +268,33 @@ async function enviarFormulario() {
     return;
   }
 
-  const btn = document.getElementById("btnEnviar");
-  btn.disabled = true;
-  btn.innerHTML = "<span>⏳</span> Procesando fotos...";
-  setProgreso(5);
+  const btn      = document.getElementById("btnEnviar");
+  const resultEl = document.getElementById("envioResult");
+  btn.disabled   = true;
+  resultEl.innerHTML = "";
+  resultEl.classList.remove("visible");
+  setProgreso(2);
 
-  try {
-    const equipos = [];
-    for (let i = 1; i <= cantidad; i++) {
+  let exitos = 0;
+  const fallos = [];
+  const log    = [];
+
+  for (let i = 1; i <= cantidad; i++) {
+    btn.innerHTML = `<span>📡</span> Enviando equipo ${i} de ${cantidad}...`;
+    setProgreso(Math.round(5 + (i / cantidad) * 88));
+
+    try {
       const sinPlaca = document.getElementById(`sinPlaca-${i}`).checked;
       const serial   = document.getElementById(`serial-${i}`).value.trim();
       const placa    = sinPlaca ? "SIN PLACA" : document.getElementById(`placa-${i}`).value.trim();
 
-      // Validar: si no marcó "sin placa", la placa es obligatoria
       if (!sinPlaca && !placa) {
-        mostrarToast(`⚠️ Equipo ${i}: falta la placa Terpel`, "error");
-        btn.disabled = false;
-        btn.innerHTML = "<span>📤</span> Enviar registro";
-        setProgreso(0);
-        return;
+        log.push(`<span class="envio-err">✗ Equipo ${i}: falta placa Terpel (omitido)</span>`);
+        fallos.push(i);
+        continue;
       }
 
-      const inputsFile  = document.querySelectorAll(`#equipo-${i} input[type=file]`);
+      const inputsFile  = document.querySelectorAll(`#equipo-${i} .foto-wrap input[type=file]`);
       const inputSerial = inputsFile[0];
       const inputPlaca  = inputsFile[1];
 
@@ -199,62 +306,65 @@ async function enviarFormulario() {
         fotoSerialBase64 = r.base64;
         fotoSerialTipo   = r.tipo;
       }
-
-      // Solo procesar foto de placa si NO marcó "sin placa"
       if (!sinPlaca && inputPlaca?.files[0]) {
         const r = await redimensionarImagen(inputPlaca.files[0]);
         fotoPlacaBase64 = r.base64;
         fotoPlacaTipo   = r.tipo;
       }
 
-      equipos.push({ sinPlaca, serial, placa, fotoSerialBase64, fotoSerialTipo, fotoPlacaBase64, fotoPlacaTipo });
-      setProgreso(5 + Math.round((i / cantidad) * 50));
+      const payload = {
+        fecha:           fechaActual,
+        tecnico,
+        estacion,
+        ticket,
+        equipoNumero:    i,
+        totalEquipos:    cantidad,
+        sinPlaca,
+        serial,
+        placa,
+        fotoSerialBase64,
+        fotoSerialTipo,
+        fotoPlacaBase64: sinPlaca ? "" : fotoPlacaBase64,
+        fotoPlacaTipo:   sinPlaca ? "" : fotoPlacaTipo
+      };
+
+      await enviarPOST(payload);
+
+      exitos++;
+      log.push(`<span class="envio-ok">✓ Equipo ${i} — ${serial || "sin serial"} / ${placa}</span>`);
+
+    } catch (err) {
+      console.error(`Error equipo ${i}:`, err);
+      fallos.push(i);
+      log.push(`<span class="envio-err">✗ Equipo ${i}: error de red</span>`);
     }
-
-    btn.innerHTML = "<span>📡</span> Enviando datos...";
-    setProgreso(60);
-
-    const payload = {
-      fecha: fechaActual,
-      tecnico,
-      estacion,
-      ticket,
-      equipos: equipos.map(eq => ({
-        sinPlaca:         eq.sinPlaca,
-        serial:           eq.serial,
-        placa:            eq.placa,
-        fotoSerialBase64: eq.fotoSerialBase64,
-        fotoSerialTipo:   eq.fotoSerialTipo,
-        fotoPlacaBase64:  eq.sinPlaca ? "" : eq.fotoPlacaBase64,
-        fotoPlacaTipo:    eq.sinPlaca ? "" : eq.fotoPlacaTipo
-      }))
-    };
-
-    await enviarPOST(payload);
-
-    setProgreso(100);
-    mostrarToast("✅ Registro enviado con éxito", "success");
-
-    setTimeout(() => {
-      document.getElementById("tecnico").value         = "";
-      document.getElementById("estacion").value        = "";
-      document.getElementById("ticket").value          = "";
-      document.getElementById("cantidadEquipos").value = 1;
-      generarEquipos(1);
-      setProgreso(0);
-      btn.disabled = false;
-      btn.innerHTML = "<span>📤</span> Enviar registro";
-    }, 2000);
-
-  } catch (err) {
-    mostrarToast("❌ Error al enviar. Verifica tu conexión.", "error");
-    btn.disabled = false;
-    btn.innerHTML = "<span>📤</span> Enviar registro";
-    setProgreso(0);
-    console.error(err);
   }
+
+  setProgreso(100);
+  resultEl.innerHTML = log.join("<br>");
+  resultEl.classList.add("visible");
+
+  if (fallos.length === 0) {
+    mostrarToast(`✅ ${exitos} equipo(s) enviado(s) correctamente`, "success");
+  } else if (exitos > 0) {
+    mostrarToast(`⚠️ ${exitos} OK · ${fallos.length} con error`, "info");
+  } else {
+    mostrarToast("❌ No se pudo enviar ningún equipo", "error");
+  }
+
+  setTimeout(() => {
+    document.getElementById("tecnico").value         = "";
+    document.getElementById("estacion").value        = "";
+    document.getElementById("ticket").value          = "";
+    document.getElementById("cantidadEquipos").value = 1;
+    generarEquipos(1);
+    setProgreso(0);
+    btn.disabled  = false;
+    btn.innerHTML = "<span>📤</span> Enviar registro";
+  }, 5000);
 }
 
+// ── INIT ─────────────────────────────────────────────────
 initFecha();
 generarEquipos(1);
 

@@ -2,6 +2,14 @@
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby3O8T88fs20HIlzwXd0b6TY992Mt3C2JQJXbMc20kCSx53TC9NM0Np85vIbdtaAdVpmg/exec";
 let fechaActual = "";
 
+// ── TESSERACT WORKER (se carga UNA sola vez al abrir la página) ──
+let ocrWorker = null;
+async function initOCR() {
+  ocrWorker = await Tesseract.createWorker("eng", 1, {
+    logger: () => {} // silenciar logs internos
+  });
+}
+
 // ── FECHA ────────────────────────────────────────────────
 function initFecha() {
   const ahora = new Date();
@@ -115,13 +123,12 @@ async function escanearOCR(input, campoId, statusId, n, tipo) {
   btnEl.classList.add("scanning");
 
   try {
-    const { data: { text } } = await Tesseract.recognize(file, "eng", {
-      logger: m => {
-        if (m.status === "recognizing text") {
-          statusEl.textContent = `⏳ Procesando... ${Math.round(m.progress * 100)}%`;
-        }
-      }
-    });
+    // Si el worker aún no está listo (rara vez), esperar
+    if (!ocrWorker) {
+      statusEl.textContent = "⏳ Cargando motor OCR...";
+      await initOCR();
+    }
+    const { data: { text } } = await ocrWorker.recognize(file);
 
     let resultado = text.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
@@ -367,6 +374,7 @@ async function enviarFormulario() {
 // ── INIT ─────────────────────────────────────────────────
 initFecha();
 generarEquipos(1);
+initOCR(); // Precarga el motor OCR en segundo plano al abrir la página
 
 document.getElementById("cantidadEquipos").addEventListener("change", function () {
   const val = Math.min(30, Math.max(1, parseInt(this.value) || 1));
